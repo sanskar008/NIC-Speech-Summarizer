@@ -21,7 +21,6 @@
         🎤 हिंदी स्पीच ट्रांसक्रिप्शन
       </h1>
 
-      <!-- Heading Input -->
       <label class="block text-sm font-medium text-gray-700 mb-2"
         >📌 शीर्षक:</label
       >
@@ -32,7 +31,6 @@
         class="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mb-4"
       />
 
-      <!-- Recording Buttons -->
       <div class="flex space-x-4 mb-4">
         <button
           id="start-button"
@@ -49,10 +47,8 @@
         </button>
       </div>
 
-      <!-- Status Label -->
       <p id="status-label" class="text-sm text-gray-600 mb-4"></p>
 
-      <!-- Transcript Area -->
       <label class="block text-sm font-medium text-gray-700 mb-2"
         >📝 प्रतिलेख:</label
       >
@@ -62,7 +58,6 @@
         rows="6"
       ></textarea>
 
-      <!-- Office Dropdown -->
       <label class="block text-sm font-medium text-gray-700 mb-2"
         >🏢 संबंधित कार्यालय:</label
       >
@@ -75,17 +70,23 @@
         {% endfor %}
       </select>
 
-      <!-- Save Button -->
-      <button
-        id="save-button"
-        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 active:bg-green-800 w-full"
-      >
-        💾 प्रतिलेख सहेजें
-      </button>
+      <div class="flex space-x-4">
+        <button
+          id="save-button"
+          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 active:bg-green-800 flex-1"
+        >
+          💾 प्रतिलेख सहेजें
+        </button>
+        <a
+          href="/transcripts"
+          class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 active:bg-purple-800 text-center"
+        >
+          📜 सभी प्रतिलेख देखें
+        </a>
+      </div>
     </div>
 
     <script>
-      // Initialize Web Speech API
       const recognition = new (window.SpeechRecognition ||
         window.webkitSpeechRecognition)();
       recognition.lang = "hi-IN";
@@ -127,7 +128,7 @@
 
       recognition.onend = () => {
         if (isRecording) {
-          recognition.start(); // Restart for continuous recording
+          recognition.start();
         } else {
           statusLabel.textContent = "🛑 रिकॉर्डिंग रुकी";
           startButton.disabled = false;
@@ -163,19 +164,11 @@
             body: JSON.stringify({ heading, transcript, office }),
           });
 
+          const result = await response.json();
           if (response.ok) {
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "transcript.docx";
-            a.click();
-            window.URL.revokeObjectURL(url);
-            statusLabel.textContent =
-              "✅ प्रतिलेख transcript.docx में सहेजा गया";
+            statusLabel.textContent = "✅ " + result.message;
           } else {
-            const error = await response.json();
-            statusLabel.textContent = error.error;
+            statusLabel.textContent = "❌ " + result.error;
           }
         } catch (error) {
           statusLabel.textContent = `❌ फ़ाइल सहेजने में त्रुटि: ${error.message}`;
