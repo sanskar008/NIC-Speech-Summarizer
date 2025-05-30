@@ -168,11 +168,11 @@
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = "transcript.txt";
+            a.download = "transcript.docx";
             a.click();
             window.URL.revokeObjectURL(url);
             statusLabel.textContent =
-              "✅ प्रतिलेख transcript.txt में सहेजा गया";
+              "✅ प्रतिलेख transcript.docx में सहेजा गया";
           } else {
             const error = await response.json();
             statusLabel.textContent = error.error;
