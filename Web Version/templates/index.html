@@ -21,6 +21,14 @@
         🎤 हिंदी स्पीच ट्रांसक्रिप्शन
       </h1>
 
+      {% if user %}
+      <div class="flex justify-between mb-4">
+        <p class="text-sm text-gray-600">
+          स्वागत है, {{ user.email }} ({{ role | capitalize }})
+        </p>
+        <a href="/logout" class="text-blue-600 hover:underline">लॉगआउट</a>
+      </div>
+      {% if role == 'admin' %}
       <label class="block text-sm font-medium text-gray-700 mb-2"
         >📌 शीर्षक:</label
       >
@@ -28,19 +36,19 @@
         id="heading-input"
         type="text"
         placeholder="शीर्षक दर्ज करें..."
-        class="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mb-4"
+        class="w-full p-3 border border-gray-300 rounded-lg mb-4"
       />
 
       <div class="flex space-x-4 mb-4">
         <button
           id="start-button"
-          class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 active:bg-blue-800"
+          class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
         >
           🎙️ रिकॉर्डिंग शुरू करें
         </button>
         <button
           id="stop-button"
-          class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 active:bg-red-800"
+          class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
           disabled
         >
           🛑 रिकॉर्डिंग रोकें
@@ -54,7 +62,7 @@
       >
       <textarea
         id="transcript-area"
-        class="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mb-4"
+        class="w-full p-3 border border-gray-300 rounded-lg mb-4"
         rows="6"
       ></textarea>
 
@@ -64,7 +72,7 @@
       <select
         id="officers-dropdown"
         multiple
-        class="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mb-4"
+        class="w-full p-3 border border-gray-300 rounded-lg mb-4"
       >
         {% for officer in officers %}
         <option value="{{ officer }}">{{ officer }}</option>
@@ -75,22 +83,55 @@
         <span>सभी अधिकारियों को असाइन करें</span>
       </label>
 
+      <label class="block text-sm font-medium text-gray-700 mb-2"
+        >⏰ समय सीमा:</label
+      >
+      <input
+        id="deadline-input"
+        type="datetime-local"
+        class="w-full p-3 border border-gray-300 rounded-lg mb-4"
+      />
+
       <div class="flex space-x-4">
         <button
           id="save-button"
-          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 active:bg-green-800 flex-1"
+          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex-1"
         >
           💾 टास्क सहेजें
         </button>
         <a
           href="/transcripts"
-          class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 active:bg-purple-800 text-center"
+          class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-center"
         >
           📜 सभी टास्क देखें
         </a>
       </div>
+      {% else %}
+      <p class="text-center text-gray-600">
+        कृपया टास्क देखने के लिए
+        <a href="/my_tasks" class="text-blue-600 hover:underline">मेरे टास्क</a>
+        पर जाएं।
+      </p>
+      {% endif %} {% else %}
+      <p class="text-center text-gray-600 mb-4">
+        कृपया कार्य करने के लिए लॉगिन करें।
+      </p>
+      <div class="flex space-x-4">
+        <a
+          href="/login"
+          class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex-1 text-center"
+          >लॉगिन</a
+        >
+        <a
+          href="/signup"
+          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex-1 text-center"
+          >साइनअप</a
+        >
+      </div>
+      {% endif %}
     </div>
 
+    {% if user and role == 'admin' %}
     <script>
       const recognition = new (window.SpeechRecognition ||
         window.webkitSpeechRecognition)();
@@ -106,6 +147,7 @@
       const headingInput = document.getElementById("heading-input");
       const officersDropdown = document.getElementById("officers-dropdown");
       const assignAllCheckbox = document.getElementById("assign-all");
+      const deadlineInput = document.getElementById("deadline-input");
 
       let isRecording = false;
 
@@ -176,6 +218,7 @@
           : Array.from(officersDropdown.selectedOptions).map(
               (option) => option.value
             );
+        const deadline = deadlineInput.value;
 
         try {
           const response = await fetch("/save_transcript", {
@@ -186,19 +229,19 @@
               transcript,
               officers,
               assign_to_all: assignToAll,
+              deadline,
             }),
           });
 
           const result = await response.json();
-          if (response.ok) {
-            statusLabel.textContent = "✅ " + result.message;
-          } else {
-            statusLabel.textContent = "❌ " + result.error;
-          }
+          statusLabel.textContent = response.ok
+            ? "✅ " + result.message
+            : "❌ " + result.error;
         } catch (error) {
           statusLabel.textContent = `❌ टास्क सहेजने में त्रुटि: ${error.message}`;
         }
       });
     </script>
+    {% endif %}
   </body>
 </html>

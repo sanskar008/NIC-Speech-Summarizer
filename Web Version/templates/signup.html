@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="hi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>साइनअप</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Noto Sans Devanagari", sans-serif;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+      <h1 class="text-2xl font-bold text-center text-gray-800 mb-4">
+        📝 साइनअप
+      </h1>
+      {% if error %}
+      <p class="text-red-600 text-center mb-4">{{ error }}</p>
+      {% endif %}
+      <form method="POST">
+        <label class="block text-sm font-medium text-gray-700 mb-2"
+          >📧 ईमेल:</label
+        >
+        <input
+          type="email"
+          name="email"
+          required
+          class="w-full p-3 border border-gray-300 rounded-lg mb-4"
+        />
+        <label class="block text-sm font-medium text-gray-700 mb-2"
+          >🔑 पासवर्ड:</label
+        >
+        <input
+          type="password"
+          name="password"
+          required
+          class="w-full p-3 border border-gray-300 rounded-lg mb-4"
+        />
+        <label class="block text-sm font-medium text-gray-700 mb-2"
+          >👤 भूमिका:</label
+        >
+        <select
+          name="role"
+          class="w-full p-3 border border-gray-300 rounded-lg mb-4"
+        >
+          <option value="officer">अधिकारी</option>
+          <option value="admin">व्यवस्थापक</option>
+        </select>
+        <label class="block text-sm font-medium text-gray-700 mb-2"
+          >🏢 पदनाम:</label
+        >
+        <select
+          name="designation"
+          class="w-full p-3 border border-gray-300 rounded-lg mb-4"
+        >
+          {% for officer in officers %}
+          <option value="{{ officer }}">{{ officer }}</option>
+          {% endfor %}
+        </select>
+        <button
+          type="submit"
+          class="bg-green-600 text-white px-4 py-2 rounded-lg w-full hover:bg-green-700"
+        >
+          साइनअप
+        </button>
+      </form>
+      <p class="text-center text-gray-600 mt-4">
+        पहले से खाता है?
+        <a href="/login" class="text-blue-600 hover:underline">लॉगिन करें</a>
+      </p>
+    </div>
+  </body>
+</html>

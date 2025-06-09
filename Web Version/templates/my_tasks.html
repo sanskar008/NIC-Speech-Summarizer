@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="hi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>मेरे टास्क</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Noto Sans Devanagari", sans-serif;
+      }
+      textarea {
+        resize: vertical;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 min-h-screen p-6">
+    <div class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-lg">
+      <h1 class="text-2xl font-bold text-center text-gray-800 mb-4">
+        📋 मेरे टास्क
+      </h1>
+      <a
+        href="/"
+        class="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 mb-4"
+        >← मुख्य पृष्ठ पर वापस</a
+      >
+      <div id="tasks-list" class="overflow-x-auto">
+        <table class="w-full border-collapse">
+          <thead>
+            <tr class="bg-gray-200">
+              <th class="border p-2 text-left">शीर्षक</th>
+              <th class="border p-2 text-left">प्रतिलेख</th>
+              <th class="border p-2 text-left">समय सीमा</th>
+              <th class="border p-2 text-left">स्थिति</th>
+              <th class="border p-2 text-left">अपडेट</th>
+              <th class="border p-2 text-left">पदनाम</th>
+              <th class="border p-2 text-left">दिनांक</th>
+              <th class="border p-2 text-left">कार्य</th>
+            </tr>
+          </thead>
+          <tbody id="tasks-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script data-officers="{{ officers | tojson | safe }}"></script>
+    <script>
+      const officersData = document.querySelector("script[data-officers]");
+      let availableOfficers = [];
+      try {
+        availableOfficers = JSON.parse(
+          officersData.getAttribute("data-officers")
+        );
+        console.log("Available Officers:", availableOfficers);
+      } catch (e) {
+        console.error("Error parsing officers:", e);
+      }
+
+      async function loadTasks() {
+        const tasksTableBody = document.getElementById("tasks-table-body");
+        try {
+          console.log("Fetching my tasks...");
+          const response = await fetch("/get_my_tasks", {
+            credentials: "include",
+          });
+          console.log("Response status:", response.status);
+          const result = await response.json();
+          console.log("Fetch result:", result);
+
+          if (response.ok) {
+            if (!result || result.length === 0) {
+              tasksTableBody.innerHTML =
+                '<tr><td colspan="8" class="border p-2 text-center text-gray-600">कोई टास्क उपलब्ध नहीं</td></tr>';
+            } else {
+              tasksTableBody.innerHTML = "";
+              result.forEach((task) => {
+                const escapeHTML = (str) =>
+                  String(str || "")
+                    .replace(/&/g, "&")
+                    .replace(/</g, "<")
+                    .replace(/>/g, ">")
+                    .replace(/"/g, '"')
+                    .replace(/'/g, "");
+                // Use task.assignments for officer options
+                const officerOptions = task.assignments
+                  .map(
+                    (a) =>
+                      `<option value="${escapeHTML(a.officer)}">${escapeHTML(
+                        a.officer
+                      )}</option>`
+                  )
+                  .join("");
+                const myAssignment = task.assignments[0] || {
+                  officer: "",
+                  update_comment: "",
+                };
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                                <td class="border p-2">${escapeHTML(
+                                  task.heading
+                                )}</td>
+                                <td class="border p-2">${escapeHTML(
+                                  task.transcript
+                                )}</td>
+                                <td class="border p-2">${
+                                  task.deadline
+                                    ? new Date(task.deadline).toLocaleString(
+                                        "hi-IN"
+                                      )
+                                    : "कोई समय सीमा नहीं"
+                                }</td>
+                                <td class="border p-2">
+                                    <select class="status-select w-full p-1 border rounded" data-id="${
+                                      task.id
+                                    }">
+                                        <option value="pending" ${
+                                          task.status === "pending"
+                                            ? "selected"
+                                            : ""
+                                        }>प्रलंबित</option>
+                                        <option value="in_progress" ${
+                                          task.status === "in_progress"
+                                            ? "selected"
+                                            : ""
+                                        }>प्रगति में</option>
+                                        <option value="completed" ${
+                                          task.status === "completed"
+                                            ? "selected"
+                                            : ""
+                                        }>पूर्ण</option>
+                                    </select>
+                                </td>
+                                <td class="border p-2">
+                                    <textarea class="w-full p-1 border rounded" rows="3" data-id="${
+                                      task.id
+                                    }" data-field="update_comment">${escapeHTML(
+                  myAssignment.update_comment
+                )}</textarea>
+                                </td>
+                                <td class="border p-2">
+                                    <select class="officer-select w-full p-1 border rounded" data-id="${
+                                      task.id
+                                    }" data-field="officer">
+                                        ${officerOptions}
+                                    </select>
+                                </td>
+                                <td class="border p-2">${new Date(
+                                  task.created_at
+                                ).toLocaleString("hi-IN")}</td>
+                                <td class="border p-2">
+                                    <button class="update-button bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700" data-id="${
+                                      task.id
+                                    }">अपडेट</button>
+                                </td>
+                            `;
+                tasksTableBody.appendChild(tr);
+                const officerSelect = tr.querySelector(".officer-select");
+                officerSelect.value =
+                  myAssignment.officer || task.assignments[0].officer;
+              });
+
+              document.querySelectorAll(".update-button").forEach((button) => {
+                button.addEventListener("click", async (e) => {
+                  const id = e.target.getAttribute("data-id");
+                  const row = e.target.closest("tr");
+                  const status = row.querySelector(".status-select").value;
+                  const updateComment = row
+                    .querySelector('textarea[data-field="update_comment"]')
+                    .value.trim();
+                  const officer = row.querySelector(".officer-select").value;
+
+                  try {
+                    const response = await fetch(`/update_task/${id}`, {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        status,
+                        update_comment: updateComment,
+                        officer,
+                      }),
+                    });
+                    const result = await response.json();
+                    alert(response.ok ? result.message : result.error);
+                    if (response.ok) loadTasks();
+                  } catch (error) {
+                    alert(`त्रुटि: ${error.message}`);
+                  }
+                });
+              });
+            }
+          } else {
+            tasksTableBody.innerHTML = `<tr><td colspan="8" class="border p-2 text-center text-red-600">❌ ${result.error}</td></tr>`;
+          }
+        } catch (error) {
+          console.error("Fetch error:", error);
+          tasksTableBody.innerHTML = `<tr><td colspan="8" class="border p-2 text-center text-red-600">❌ त्रुटि: ${error.message}</td></tr>`;
+        }
+      }
+
+      window.onload = loadTasks;
+    </script>
+  </body>
+</html>
