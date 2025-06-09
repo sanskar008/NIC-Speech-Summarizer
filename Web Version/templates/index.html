@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>हिंदी स्पीच ट्रांसक्रिप्शन</title>
+    <title>Meeting Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&display=swap"
@@ -18,7 +18,7 @@
   <body class="bg-gray-100 min-h-screen flex items-center justify-center">
     <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
       <h1 class="text-2xl font-bold text-center text-gray-800 mb-4">
-        🎤 हिंदी स्पीच ट्रांसक्रिप्शन
+        🎤 TL Meeting Manager (NIC)
       </h1>
 
       {% if user %}
@@ -26,7 +26,7 @@
         <p class="text-sm text-gray-600">
           स्वागत है, {{ user.email }} ({{ role | capitalize }})
         </p>
-        <a href="/logout" class="text-blue-600 hover:underline">लॉगआउट</a>
+        <a href="/logout" class="text-blue-600 hover:underline">Logout</a>
       </div>
       {% if role == 'admin' %}
       <label class="block text-sm font-medium text-gray-700 mb-2"
@@ -58,7 +58,7 @@
       <p id="status-label" class="text-sm text-gray-600 mb-4"></p>
 
       <label class="block text-sm font-medium text-gray-700 mb-2"
-        >📝 प्रतिलेख:</label
+        >📝 विवरण:</label
       >
       <textarea
         id="transcript-area"
@@ -97,13 +97,13 @@
           id="save-button"
           class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex-1"
         >
-          💾 टास्क सहेजें
+          💾 Save Task
         </button>
         <a
           href="/transcripts"
           class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-center"
         >
-          📜 सभी टास्क देखें
+          📜 All Tasks
         </a>
       </div>
       {% else %}
@@ -120,12 +120,12 @@
         <a
           href="/login"
           class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex-1 text-center"
-          >लॉगिन</a
+          >Login</a
         >
         <a
           href="/signup"
           class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex-1 text-center"
-          >साइनअप</a
+          >Signup</a
         >
       </div>
       {% endif %}
