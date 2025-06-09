@@ -59,29 +59,34 @@
       ></textarea>
 
       <label class="block text-sm font-medium text-gray-700 mb-2"
-        >🏢 संबंधित कार्यालय:</label
+        >🏢 अधिकारियों को असाइन करें:</label
       >
       <select
-        id="office-dropdown"
+        id="officers-dropdown"
+        multiple
         class="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mb-4"
       >
-        {% for office in offices %}
-        <option value="{{ office }}">{{ office }}</option>
+        {% for officer in officers %}
+        <option value="{{ officer }}">{{ officer }}</option>
         {% endfor %}
       </select>
+      <label class="flex items-center mb-4">
+        <input type="checkbox" id="assign-all" class="mr-2" />
+        <span>सभी अधिकारियों को असाइन करें</span>
+      </label>
 
       <div class="flex space-x-4">
         <button
           id="save-button"
           class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 active:bg-green-800 flex-1"
         >
-          💾 प्रतिलेख सहेजें
+          💾 टास्क सहेजें
         </button>
         <a
           href="/transcripts"
           class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 active:bg-purple-800 text-center"
         >
-          📜 सभी प्रतिलेख देखें
+          📜 सभी टास्क देखें
         </a>
       </div>
     </div>
@@ -99,7 +104,8 @@
       const transcriptArea = document.getElementById("transcript-area");
       const saveButton = document.getElementById("save-button");
       const headingInput = document.getElementById("heading-input");
-      const officeDropdown = document.getElementById("office-dropdown");
+      const officersDropdown = document.getElementById("officers-dropdown");
+      const assignAllCheckbox = document.getElementById("assign-all");
 
       let isRecording = false;
 
@@ -152,16 +158,35 @@
         recognition.stop();
       });
 
+      assignAllCheckbox.addEventListener("change", () => {
+        officersDropdown.disabled = assignAllCheckbox.checked;
+        if (assignAllCheckbox.checked) {
+          Array.from(officersDropdown.options).forEach(
+            (option) => (option.selected = false)
+          );
+        }
+      });
+
       saveButton.addEventListener("click", async () => {
         const heading = headingInput.value;
         const transcript = transcriptArea.value;
-        const office = officeDropdown.value;
+        const assignToAll = assignAllCheckbox.checked;
+        const officers = assignToAll
+          ? []
+          : Array.from(officersDropdown.selectedOptions).map(
+              (option) => option.value
+            );
 
         try {
           const response = await fetch("/save_transcript", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ heading, transcript, office }),
+            body: JSON.stringify({
+              heading,
+              transcript,
+              officers,
+              assign_to_all: assignToAll,
+            }),
           });
 
           const result = await response.json();
@@ -171,7 +196,7 @@
             statusLabel.textContent = "❌ " + result.error;
           }
         } catch (error) {
-          statusLabel.textContent = `❌ फ़ाइल सहेजने में त्रुटि: ${error.message}`;
+          statusLabel.textContent = `❌ टास्क सहेजने में त्रुटि: ${error.message}`;
         }
       });
     </script>
