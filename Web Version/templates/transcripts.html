@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>सभी टास्क</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&display=swap"
       rel="stylesheet"
@@ -19,30 +21,119 @@
       select[multiple] {
         height: 100px;
       }
+      th.sortable {
+        cursor: pointer;
+        position: relative;
+      }
+      th.sortable:hover {
+        background-color: #e5e7eb;
+      }
+      .sort-arrow {
+        display: inline-block;
+        margin-left: 4px;
+      }
+      .filter-row select {
+        width: 100%;
+        padding: 2px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        font-size: 0.875rem;
+      }
     </style>
   </head>
   <body class="bg-gray-100 min-h-screen p-6">
     <div class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-lg">
       <h1 class="text-2xl font-bold text-center text-gray-800 mb-4">
-        📜 सभी टास्क
+        📜 All Tasks
       </h1>
-      <a
-        href="/"
-        class="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 mb-4"
-        >← मुख्य पृष्ठ पर वापस</a
-      >
+      <div class="flex justify-between items-center mb-4">
+        <a
+          href="/"
+          class="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >← Back to main page</a
+        >
+        <button
+          onclick="exportTableToExcel()"
+          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+        >
+          🖨️ Save Table
+        </button>
+      </div>
+
       <div id="transcripts-list" class="overflow-x-auto">
         <table class="w-full border-collapse">
           <thead>
+            <tr class="bg-gray-200 filter-row">
+              <th class="border p-2">
+                <select data-filter="heading">
+                  <option value="">सभी शीर्षक</option>
+                </select>
+              </th>
+              <th class="border p-2">
+                <select data-filter="transcript">
+                  <option value="">सभी विवरण</option>
+                </select>
+              </th>
+              <th class="border p-2"></th>
+              <th class="border p-2">
+                <select data-filter="assigned_officers">
+                  <option value="">सभी अधिकारी</option>
+                </select>
+              </th>
+              <th class="border p-2">
+                <select data-filter="update_comment">
+                  <option value="">सभी टिप्पणियाँ</option>
+                </select>
+              </th>
+              <th class="border p-2">
+                <select data-filter="deadline">
+                  <option value="">सभी समय सीमाएँ</option>
+                </select>
+              </th>
+              <th class="border p-2">
+                <select data-filter="status">
+                  <option value="">सभी स्थिति</option>
+                  <option value="pending">लंबित</option>
+                  <option value="in_progress">प्रगति में</option>
+                  <option value="completed">पूर्ण</option>
+                </select>
+              </th>
+              <th class="border p-2">
+                <select data-filter="created_at">
+                  <option value="">सभी दिनांक</option>
+                </select>
+              </th>
+              <th class="border p-2"></th>
+            </tr>
             <tr class="bg-gray-200">
-              <th class="border p-2 text-left">शीर्षक</th>
-              <th class="border p-2 text-left">विवरण</th>
+              <th class="border p-2 text-left sortable" data-sort="heading">
+                शीर्षक <span class="sort-arrow"></span>
+              </th>
+              <th class="border p-2 text-left sortable" data-sort="transcript">
+                विवरण <span class="sort-arrow"></span>
+              </th>
               <th class="border p-2 text-left">अधिकारी असाइन करें</th>
-              <th class="border p-2 text-left">असाइन किए गए अधिकारी</th>
-              <th class="border p-2 text-left">अपडेट टिप्पणी</th>
-              <th class="border p-2 text-left">समय सीमा</th>
-              <th class="border p-2 text-left">स्थिति</th>
-              <th class="border p-2 text-left">दिनांक</th>
+              <th
+                class="border p-2 text-left sortable"
+                data-sort="assigned_officers"
+              >
+                असाइन किए गए अधिकारी <span class="sort-arrow"></span>
+              </th>
+              <th
+                class="border p-2 text-left sortable"
+                data-sort="update_comment"
+              >
+                अपडेट टिप्पणी <span class="sort-arrow"></span>
+              </th>
+              <th class="border p-2 text-left sortable" data-sort="deadline">
+                समय सीमा <span class="sort-arrow"></span>
+              </th>
+              <th class="border p-2 text-left sortable" data-sort="status">
+                स्थिति <span class="sort-arrow"></span>
+              </th>
+              <th class="border p-2 text-left sortable" data-sort="created_at">
+                दिनांक <span class="sort-arrow"></span>
+              </th>
               <th class="border p-2 text-left">कार्रवाई</th>
             </tr>
           </thead>
@@ -68,10 +159,323 @@
         alert("अधिकारी सूची लोड करने में त्रुटि: " + e.message);
       }
 
-      async function loadTranscripts() {
+      let tasks = [];
+      let sortColumn = null;
+      let sortDirection = 1; // 1 for ascending, -1 for descending
+      let filters = {
+        heading: "",
+        transcript: "",
+        assigned_officers: "",
+        update_comment: "",
+        deadline: "",
+        status: "",
+        created_at: "",
+      };
+
+      const statusOrder = {
+        लंबित: 1,
+        "प्रगति में": 2,
+        पूर्ण: 3,
+      };
+
+      function escapeHTML(str) {
+        return String(str || "")
+          .replace(/&/g, "&")
+          .replace(/</g, "<")
+          .replace(/>/g, ">")
+          .replace(/"/g, "")
+          .replace(/'/g, "");
+      }
+
+      function populateDropdowns() {
+        const dropdowns = {
+          heading: new Set(),
+          transcript: new Set(),
+          update_comment: new Set(),
+          deadline: new Set(),
+          created_at: new Set(),
+        };
+
+        // Collect unique values from current tasks
+        tasks.forEach((task) => {
+          dropdowns.heading.add(task.heading);
+          dropdowns.transcript.add(
+            task.transcript.substring(0, 50) +
+              (task.transcript.length > 50 ? "..." : "")
+          );
+          task.assignments.forEach((a) => {
+            dropdowns.update_comment.add(a.update_comment || "कोई अपडेट नहीं");
+          });
+          if (task.deadline)
+            dropdowns.deadline.add(task.deadline.substring(0, 10));
+          if (task.created_at)
+            dropdowns.created_at.add(task.created_at.substring(0, 10));
+        });
+
+        // Populate dropdowns
+        Object.keys(dropdowns).forEach((key) => {
+          const select = document.querySelector(`select[data-filter="${key}"]`);
+          const options = Array.from(dropdowns[key])
+            .sort((a, b) => a.localeCompare(b, "hi"))
+            .map(
+              (value) =>
+                `<option value="${escapeHTML(value)}">${escapeHTML(
+                  value
+                )}</option>`
+            );
+          select.innerHTML = `<option value="">सभी` + options.join("");
+        });
+
+        // Populate Assigned Officers with all available officers
+        const officersSelect = document.querySelector(
+          `select[data-filter="assigned_officers"]`
+        );
+        const officerOptions = availableOfficers
+          .sort((a, b) => a.localeCompare(b, "hi"))
+          .map(
+            (officer) =>
+              `<option value="${escapeHTML(officer)}">${escapeHTML(
+                officer
+              )}</option>`
+          );
+        officersSelect.innerHTML =
+          `<option value="">सभी अधिकारी</option>` + officerOptions.join("");
+      }
+
+      function renderTasks() {
         const transcriptsTableBody = document.getElementById(
           "transcripts-table-body"
         );
+        let filteredTasks = tasks.filter((task) => {
+          const assignedOfficers = task.assignments
+            .map((a) => a.officer)
+            .join(", ");
+          const updateComments = task.assignments
+            .map((a) => a.update_comment || "कोई अपडेट नहीं")
+            .join(", ");
+          return (
+            (!filters.heading || task.heading === filters.heading) &&
+            (!filters.transcript || task.transcript === filters.transcript) &&
+            (!filters.assigned_officers ||
+              task.assignments.some(
+                (a) => a.officer === filters.assigned_officers
+              )) &&
+            (!filters.update_comment ||
+              task.assignments.some(
+                (a) =>
+                  (a.update_comment || "कोई अपडेट नहीं") ===
+                  filters.update_comment
+              )) &&
+            (!filters.deadline ||
+              (task.deadline && task.deadline.startsWith(filters.deadline))) &&
+            (!filters.status || task.status === filters.status) &&
+            (!filters.created_at ||
+              task.created_at.startsWith(filters.created_at))
+          );
+        });
+
+        if (sortColumn) {
+          filteredTasks.sort((a, b) => {
+            let aValue, bValue;
+            switch (sortColumn) {
+              case "heading":
+              case "transcript":
+                aValue = a[sortColumn].toLowerCase();
+                bValue = b[sortColumn].toLowerCase();
+                break;
+              case "assigned_officers":
+                aValue = a.assignments
+                  .map((a) => a.officer)
+                  .join(", ")
+                  .toLowerCase();
+                bValue = b.assignments
+                  .map((a) => a.officer)
+                  .join(", ")
+                  .toLowerCase();
+                break;
+              case "update_comment":
+                aValue = a.assignments
+                  .map((a) => a.update_comment || "कोई अपडेट नहीं")
+                  .join(", ")
+                  .toLowerCase();
+                bValue = b.assignments
+                  .map((a) => a.update_comment || "कोई अपडेट नहीं")
+                  .join(", ")
+                  .toLowerCase();
+                break;
+              case "deadline":
+              case "created_at":
+                aValue = a[sortColumn] || "";
+                bValue = b[sortColumn] || "";
+                break;
+              case "status":
+                aValue = statusOrder[a[sortColumn]] || 0;
+                bValue = statusOrder[b[sortColumn]] || 0;
+                break;
+            }
+            if (aValue < bValue) return -1 * sortDirection;
+            if (aValue > bValue) return 1 * sortDirection;
+            return 0;
+          });
+        }
+
+        transcriptsTableBody.innerHTML = "";
+        if (filteredTasks.length === 0) {
+          transcriptsTableBody.innerHTML =
+            '<tr><td colspan="9" class="border p-2 text-center text-gray-600">कोई टास्क उपलब्ध नहीं</td></tr>';
+          return;
+        }
+
+        filteredTasks.forEach((task) => {
+          const officerOptions = availableOfficers
+            .map(
+              (officer) =>
+                `<option value="${escapeHTML(officer)}" ${
+                  task.assignments.some((a) => a.officer === officer)
+                    ? "selected"
+                    : ""
+                }>${escapeHTML(officer)}</option>`
+            )
+            .join("");
+          const assignedOfficers =
+            task.assignments.map((a) => escapeHTML(a.officer)).join(", ") ||
+            "कोई नहीं";
+          const updateComments = task.assignments
+            .map((a) =>
+              a.update_comment ? escapeHTML(a.update_comment) : "कोई अपडेट नहीं"
+            )
+            .join(", ");
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td class="border p-2">
+              <input type="text" value="${escapeHTML(
+                task.heading
+              )}" class="w-full p-1 border rounded" data-id="${
+            task.id
+          }" data-field="heading">
+            </td>
+            <td class="border p-2">
+              <textarea class="w-full p-1 border rounded" rows="3" data-id="${
+                task.id
+              }" data-field="transcript">${escapeHTML(
+            task.transcript
+          )}</textarea>
+            </td>
+            <td class="border p-2">
+              <select multiple class="w-full p-1 border rounded" data-id="${
+                task.id
+              }" data-field="officers" title="Ctrl+क्लिक से एकाधिक अधिकारी चुनें">
+                ${officerOptions}
+              </select>
+              <label class="flex items-center mt-2">
+                <input type="checkbox" class="assign-all-checkbox mr-2" data-id="${
+                  task.id
+                }" ${
+            task.assignments.length === availableOfficers.length
+              ? "checked"
+              : ""
+          }>
+                <span>सभी अधिकारियों को असाइन करें</span>
+              </label>
+            </td>
+            <td class="border p-2 text-sm text-gray-600">${assignedOfficers}</td>
+            <td class="border p-2 text-sm text-gray-600">${updateComments}</td>
+            <td class="border p-2">
+              <input type="datetime-local" value="${
+                task.deadline ? task.deadline.slice(0, 16) : ""
+              }" class="w-full p-1 border rounded" data-id="${
+            task.id
+          }" data-field="deadline">
+            </td>
+            <td class="border p-2">${
+              task.status === "pending"
+                ? "लंबित"
+                : task.status === "in_progress"
+                ? "प्रगति में"
+                : "पूर्ण"
+            }</td>
+            <td class="border p-2">${new Date(task.created_at).toLocaleString(
+              "hi-IN"
+            )}</td>
+            <td class="border p-2 flex space-x-2">
+              <button class="save-button bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700" data-id="${
+                task.id
+              }">Save</button>
+              <button class="delete-button bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700" data-id="${
+                task.id
+              }">Delete</button>
+            </td>
+          `;
+          transcriptsTableBody.appendChild(tr);
+        });
+      }
+
+      function exportTableToExcel() {
+        const table = document.querySelector("#transcripts-list table");
+        if (!table) {
+          alert("कोई टेबल नहीं मिली डाउनलोड करने के लिए!");
+          return;
+        }
+
+        // Clone the table to avoid modifying the DOM
+        const tableClone = table.cloneNode(true);
+
+        // Remove the filter row (first row in thead)
+        const thead = tableClone.querySelector("thead");
+        if (thead && thead.rows.length > 0) {
+          thead.deleteRow(0);
+        }
+
+        // Replace input/textarea/select values with their actual values for export
+        tableClone
+          .querySelectorAll('input[data-field="heading"]')
+          .forEach((input) => {
+            const td = input.parentElement;
+            td.textContent = input.value;
+          });
+        tableClone
+          .querySelectorAll('textarea[data-field="transcript"]')
+          .forEach((textarea) => {
+            const td = textarea.parentElement;
+            td.textContent = textarea.value;
+          });
+        tableClone
+          .querySelectorAll('select[data-field="officers"]')
+          .forEach((select) => {
+            const td = select.parentElement;
+            const selected = Array.from(select.selectedOptions)
+              .map((opt) => opt.value)
+              .join(", ");
+            td.textContent = selected;
+          });
+        tableClone
+          .querySelectorAll('input[data-field="deadline"]')
+          .forEach((input) => {
+            const td = input.parentElement;
+            td.textContent = input.value;
+          });
+        // Remove checkboxes and buttons
+        tableClone
+          .querySelectorAll(
+            ".assign-all-checkbox, .save-button, .delete-button"
+          )
+          .forEach((el) => el.remove());
+        // Remove action column header
+        if (thead) {
+          thead.querySelectorAll("th").forEach((th, idx) => {
+            if (th.textContent.includes("कार्रवाई")) th.textContent = "";
+          });
+        }
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.table_to_sheet(tableClone);
+
+        XLSX.utils.book_append_sheet(wb, ws, "Transcripts");
+
+        XLSX.writeFile(wb, "transcripts.xlsx");
+      }
+
+      async function loadTranscripts() {
         try {
           console.log("Fetching tasks from /get_transcripts...");
           const response = await fetch("/get_transcripts", {
@@ -82,253 +486,133 @@
           console.log("Fetch result:", result);
 
           if (response.ok) {
-            if (!result || result.length === 0) {
-              transcriptsTableBody.innerHTML =
-                '<tr><td colspan="9" class="border p-2 text-center text-gray-600">कोई टास्क उपलब्ध नहीं</td></tr>';
-            } else {
-              transcriptsTableBody.innerHTML = "";
-              result.forEach((task) => {
-                const escapeHTML = (str) =>
-                  String(str || "")
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#39;");
-
-                // Main row
-                const officerOptions = availableOfficers
-                  .map(
-                    (officer) =>
-                      `<option value="${escapeHTML(officer)}" ${
-                        task.assignments.some((a) => a.officer === officer)
-                          ? "selected"
-                          : ""
-                      }>${escapeHTML(officer)}</option>`
-                  )
-                  .join("");
-
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                  <td class="border p-2" rowspan="${Math.max(
-                    1,
-                    task.assignments.length
-                  )}">
-                  <input type="text" value="${escapeHTML(
-                    task.heading
-                  )}" class="w-full p-1 border rounded" data-id="${
-                  task.id
-                }" data-field="heading">
-                  </td>
-                  <td class="border p-2" rowspan="${Math.max(
-                    1,
-                    task.assignments.length
-                  )}">
-                  <textarea class="w-full p-1 border rounded" rows="3" data-id="${
-                    task.id
-                  }" data-field="transcript">${escapeHTML(
-                  task.transcript
-                )}</textarea>
-                  </td>
-                  <td class="border p-2" rowspan="${Math.max(
-                    1,
-                    task.assignments.length
-                  )}">
-                  <select multiple class="w-full p-1 border rounded" data-id="${
-                    task.id
-                  }" data-field="officers" title="Ctrl+क्लिक से एकाधिक अधिकारी चुनें">
-                    ${officerOptions}
-                  </select>
-                  <label class="flex items-center mt-2">
-                    <input type="checkbox" class="assign-all-checkbox mr-2" data-id="${
-                      task.id
-                    }" ${
-                  task.assignments.length === availableOfficers.length
-                    ? "checked"
-                    : ""
-                }>
-                    <span>सभी अधिकारियों को असाइन करें</span>
-                  </label>
-                  </td>
-                  <td class="border p-2 text-sm text-gray-600">
-                  ${
-                    task.assignments.length > 0
-                      ? escapeHTML(task.assignments[0].officer)
-                      : "कोई नहीं"
-                  }
-                  </td>
-                  <td class="border p-2 text-sm text-gray-600">
-                  ${
-                    task.assignments.length > 0
-                      ? task.assignments[0].update_comment
-                        ? escapeHTML(task.assignments[0].update_comment)
-                        : "कोई अपडेट नहीं"
-                      : "कोई अपडेट नहीं"
-                  }
-                  </td>
-                  <td class="border p-2" rowspan="${Math.max(
-                    1,
-                    task.assignments.length
-                  )}">
-                  <input type="datetime-local" value="${
-                    task.deadline ? task.deadline.slice(0, 16) : ""
-                  }" class="w-full p-1 border rounded" data-id="${
-                  task.id
-                }" data-field="deadline">
-                  </td>
-                  <td class="border p-2" rowspan="${Math.max(
-                    1,
-                    task.assignments.length
-                  )}">
-                  ${
-                    task.status === "pending"
-                      ? "प्रलंबित"
-                      : task.status === "in_progress"
-                      ? "प्रगति में"
-                      : "पूर्ण"
-                  }
-                  </td>
-                  <td class="border p-2" rowspan="${Math.max(
-                    1,
-                    task.assignments.length
-                  )}">
-                  ${new Date(task.created_at).toLocaleString("hi-IN")}
-                  </td>
-                  <td class="border p-2 flex space-x-2" rowspan="${Math.max(
-                    1,
-                    task.assignments.length
-                  )}">
-                  <button class="save-button bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700" data-id="${
-                    task.id
-                  }">सहेजें</button>
-                  <button class="delete-button bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700" data-id="${
-                    task.id
-                  }">हटाएं</button>
-                  </td>
-                `;
-                transcriptsTableBody.appendChild(tr);
-
-                // Sub-rows for additional assignments
-                if (task.assignments.length > 1) {
-                  for (let i = 1; i < task.assignments.length; i++) {
-                    const subTr = document.createElement("tr");
-                    subTr.innerHTML = `
-                    <td class="border p-2 text-sm text-gray-600">
-                    ${escapeHTML(task.assignments[i].officer)}
-                    </td>
-                    <td class="border p-2 text-sm text-gray-600">
-                    ${
-                      task.assignments[i].update_comment
-                        ? escapeHTML(task.assignments[i].update_comment)
-                        : "कोई अपडेट नहीं"
-                    }
-                    </td>
-                  `;
-                    transcriptsTableBody.appendChild(subTr);
-                  }
-                }
-              });
-
-              document.querySelectorAll(".save-button").forEach((button) => {
-                button.addEventListener("click", async (e) => {
-                  const id = e.target.getAttribute("data-id");
-                  const row = e.target.closest("tr");
-                  const heading = row
-                    .querySelector('input[data-field="heading"]')
-                    .value.trim();
-                  const transcript = row
-                    .querySelector('textarea[data-field="transcript"]')
-                    .value.trim();
-                  const officersSelect = row.querySelector(
-                    'select[data-field="officers"]'
-                  );
-                  const assignAll = row.querySelector(
-                    ".assign-all-checkbox"
-                  ).checked;
-                  const officers = assignAll
-                    ? []
-                    : Array.from(officersSelect.selectedOptions).map(
-                        (option) => option.value
-                      );
-                  const deadline = row.querySelector(
-                    'input[data-field="deadline"]'
-                  ).value;
-
-                  if (
-                    !heading ||
-                    !transcript ||
-                    (!officers.length && !assignAll)
-                  ) {
-                    alert(
-                      "शीर्षक, प्रतिलेख, और कम से कम एक अधिकारी अनिवार्य हैं"
-                    );
-                    return;
-                  }
-
-                  try {
-                    const response = await fetch(`/update_transcript/${id}`, {
-                      method: "PUT",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        heading,
-                        transcript,
-                        officers,
-                        assign_to_all: assignAll,
-                        deadline,
-                      }),
-                    });
-                    const result = await response.json();
-                    alert(response.ok ? result.message : result.error);
-                    if (response.ok) loadTranscripts();
-                  } catch (error) {
-                    alert(`त्रुटि: ${error.message}`);
-                  }
-                });
-              });
-
-              document.querySelectorAll(".delete-button").forEach((button) => {
-                button.addEventListener("click", async (e) => {
-                  const id = e.target.getAttribute("data-id");
-                  if (!confirm("क्या आप इस टास्क को हटाना चाहते हैं?")) return;
-                  try {
-                    const response = await fetch(`/delete_transcript/${id}`, {
-                      method: "DELETE",
-                      headers: { "Content-Type": "application/json" },
-                    });
-                    const result = await response.json();
-                    alert(response.ok ? result.message : result.error);
-                    if (response.ok) loadTranscripts();
-                  } catch (error) {
-                    alert(`त्रुटि: ${error.message}`);
-                  }
-                });
-              });
-
-              document
-                .querySelectorAll(".assign-all-checkbox")
-                .forEach((checkbox) => {
-                  checkbox.addEventListener("change", (e) => {
-                    const row = e.target.closest("tr");
-                    const officersSelect = row.querySelector(
-                      'select[data-field="officers"]'
-                    );
-                    officersSelect.disabled = e.target.checked;
-                    if (e.target.checked) {
-                      Array.from(officersSelect.options).forEach(
-                        (option) => (option.selected = false)
-                      );
-                    }
-                  });
-                });
-            }
+            tasks = result || [];
+            populateDropdowns();
+            renderTasks();
           } else {
-            transcriptsTableBody.innerHTML = `<tr><td colspan="9" class="border p-2 text-center text-red-600">❌ ${result.error}</td></tr>`;
+            document.getElementById(
+              "transcripts-table-body"
+            ).innerHTML = `<tr><td colspan="9" class="border p-2 text-center text-red-600">❌ ${result.error}</td></tr>`;
           }
         } catch (error) {
           console.error("Fetch error:", error);
-          transcriptsTableBody.innerHTML = `<tr><td colspan="9" class="border p-2 text-center text-red-600">❌ त्रुटि: ${error.message}</td></tr>`;
+          document.getElementById(
+            "transcripts-table-body"
+          ).innerHTML = `<tr><td colspan="9" class="border p-2 text-center text-red-600">❌ त्रुटि: ${error.message}</td></tr>`;
         }
       }
+
+      // Sorting event listeners
+      document.querySelectorAll(".sortable").forEach((th) => {
+        th.addEventListener("click", () => {
+          const column = th.getAttribute("data-sort");
+          if (sortColumn === column) {
+            sortDirection = -sortDirection;
+          } else {
+            sortColumn = column;
+            sortDirection = 1;
+          }
+          document
+            .querySelectorAll(".sort-arrow")
+            .forEach((arrow) => (arrow.textContent = ""));
+          th.querySelector(".sort-arrow").textContent =
+            sortDirection === 1 ? "↑" : "↓";
+          renderTasks();
+        });
+      });
+
+      // Filtering event listeners
+      document.querySelectorAll("[data-filter]").forEach((select) => {
+        select.addEventListener("change", () => {
+          filters[select.getAttribute("data-filter")] = select.value;
+          renderTasks();
+        });
+      });
+
+      // Save button event listeners
+      document.addEventListener("click", async (e) => {
+        if (e.target.classList.contains("save-button")) {
+          const id = e.target.getAttribute("data-id");
+          const row = e.target.closest("tr");
+          const heading = row
+            .querySelector('input[data-field="heading"]')
+            .value.trim();
+          const transcript = row
+            .querySelector('textarea[data-field="transcript"]')
+            .value.trim();
+          const officersSelect = row.querySelector(
+            'select[data-field="officers"]'
+          );
+          const assignAll = row.querySelector(".assign-all-checkbox").checked;
+          const officers = assignAll
+            ? []
+            : Array.from(officersSelect.selectedOptions).map(
+                (option) => option.value
+              );
+          const deadline = row.querySelector(
+            'input[data-field="deadline"]'
+          ).value;
+
+          if (!heading || !transcript || (!officers.length && !assignAll)) {
+            alert("शीर्षक, प्रतिलेख, और कम से कम एक अधिकारी अनिवार्य हैं");
+            return;
+          }
+
+          try {
+            const response = await fetch(`/update_transcript/${id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                heading,
+                transcript,
+                officers,
+                assign_to_all: assignAll,
+                deadline,
+              }),
+            });
+            const result = await response.json();
+            alert(response.ok ? result.message : result.error);
+            if (response.ok) loadTranscripts();
+          } catch (error) {
+            alert(`त्रुटि: ${error.message}`);
+          }
+        }
+      });
+
+      // Delete button event listeners
+      document.addEventListener("click", async (e) => {
+        if (e.target.classList.contains("delete-button")) {
+          const id = e.target.getAttribute("data-id");
+          if (!confirm("क्या आप इस टास्क को हटाना चाहते हैं?")) return;
+          try {
+            const response = await fetch(`/delete_transcript/${id}`, {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+            });
+            const result = await response.json();
+            alert(response.ok ? result.message : result.error);
+            if (response.ok) loadTranscripts();
+          } catch (error) {
+            alert(`त्रुटि: ${error.message}`);
+          }
+        }
+      });
+
+      // Assign all checkbox event listeners
+      document.addEventListener("change", (e) => {
+        if (e.target.classList.contains("assign-all-checkbox")) {
+          const row = e.target.closest("tr");
+          const officersSelect = row.querySelector(
+            'select[data-field="officers"]'
+          );
+          officersSelect.disabled = e.target.checked;
+          if (e.target.checked) {
+            Array.from(officersSelect.options).forEach(
+              (option) => (option.selected = false)
+            );
+          }
+        }
+      });
 
       window.onload = loadTranscripts;
     </script>
