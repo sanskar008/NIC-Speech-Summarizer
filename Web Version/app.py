@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import json
 import os
+import logging
 from supabase import create_client, Client
 from datetime import datetime
 
@@ -150,11 +151,13 @@ def logout():
 
 @app.route("/transcripts")
 def transcripts():
-    if not session.get("user") or get_user_role() != "admin":
-        print("Session user not authorized:", session.get("user"))
+    user = session.get("user")
+    role = get_user_role()
+    if not user or role != "admin":
         return redirect(url_for("login"))
     officers = load_offices()
-    return render_template("transcripts.html", officers=officers)
+    logging.debug(f"Rendering transcripts with officers: {officers}")
+    return render_template("transcripts.html", user=user, role=role, officers=officers)
 
 
 @app.route("/my_tasks")
@@ -235,7 +238,7 @@ def get_transcripts():
         tasks_response = (
             supabase.table("tasks").select("*").order("created_at", desc=True).execute()
         )
-        print("Tasks fetched:", tasks_response.data)
+
         if not tasks_response.data:
             return jsonify([]), 200
         tasks = tasks_response.data
@@ -400,6 +403,24 @@ def update_transcript(id):
     except Exception as e:
         print(f"Error updating transcript: {str(e)}")
         return jsonify({"error": f"टास्क अपडेट करने में त्रुटि: {str(e)}"}), 500
+
+
+# New Delete Endpoint
+@app.route("/delete_transcript/<id>", methods=["DELETE"])
+def delete_transcript(id):
+    if not session.get("user") or get_user_role() != "admin":
+        return jsonify({"error": "केवल व्यवस्थापक टास्क हटा सकते हैं"}), 403
+    try:
+        # Delete assignments first to maintain referential integrity
+        supabase.table("task_assignments").delete().eq("task_id", id).execute()
+        # Delete task
+        task_response = supabase.table("tasks").delete().eq("id", id).execute()
+        if not task_response.data:
+            return jsonify({"error": "टास्क हटाने में त्रुटि"}), 500
+        return jsonify({"message": "टास्क सफलतापूर्वक हटाया गया"}), 200
+    except Exception as e:
+        logging.error(f"Error deleting transcript: {e}")
+        return jsonify({"error": f"टास्क हटाने में त्रुटि: {str(e)}"}), 500
 
 
 @app.route("/debug_officers")
