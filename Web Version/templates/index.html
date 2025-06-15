@@ -13,6 +13,9 @@
       body {
         font-family: "Noto Sans Devanagari", sans-serif;
       }
+      textarea {
+        resize: vertical;
+      }
     </style>
   </head>
   <body class="bg-gray-100 min-h-screen flex items-center justify-center">
@@ -29,7 +32,7 @@
         <a href="/logout" class="text-blue-600 hover:underline">Logout</a>
       </div>
       {% if role == 'admin' %}
-      <label class="block text-sm font-medium text-gray-700 mb-2"
+      <label class="block text-m font-medium text-gray-700 mb-2"
         >📌 शीर्षक:</label
       >
       <input
@@ -57,7 +60,7 @@
 
       <p id="status-label" class="text-sm text-gray-600 mb-4"></p>
 
-      <label class="block text-sm font-medium text-gray-700 mb-2"
+      <label class="block text-m font-medium text-gray-700 mb-2"
         >📝 विवरण:</label
       >
       <textarea
@@ -66,7 +69,7 @@
         rows="6"
       ></textarea>
 
-      <label class="block text-sm font-medium text-gray-700 mb-2"
+      <label class="block text-m font-medium text-gray-700 mb-2"
         >🏢 अधिकारियों को असाइन करें:</label
       >
       <select
@@ -80,10 +83,10 @@
       </select>
       <label class="flex items-center mb-4">
         <input type="checkbox" id="assign-all" class="mr-2" />
-        <span>सभी अधिकारियों को असाइन करें</span>
+        <span>सभी अधिकारियों को एकसाथ असाइन करें</span>
       </label>
 
-      <label class="block text-sm font-medium text-gray-700 mb-2"
+      <label class="block text-m font-medium text-gray-700 mb-2"
         >⏰ समय सीमा:</label
       >
       <input
@@ -97,7 +100,7 @@
           id="save-button"
           class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex-1"
         >
-          💾 Save Task
+          💾 Save
         </button>
         <a
           href="/transcripts"
@@ -137,7 +140,7 @@
         window.webkitSpeechRecognition)();
       recognition.lang = "hi-IN";
       recognition.interimResults = true;
-      recognition.continuous = true;
+      recognition.continuous = true; // Changed to false to treat each session as distinct
 
       const startButton = document.getElementById("start-button");
       const stopButton = document.getElementById("stop-button");
@@ -153,35 +156,39 @@
 
       recognition.onstart = () => {
         isRecording = true;
-        statusLabel.textContent = "🎙️ रिकॉर्डिंग शुरू...";
+        statusLabel.textContent = "🎙️ Recording Started...";
         startButton.disabled = true;
         stopButton.disabled = false;
       };
 
       recognition.onresult = (event) => {
-        let interimTranscript = "";
         let finalTranscript = "";
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
+          const transcript = event.results[i][0].transcript.trim();
           if (event.results[i].isFinal) {
-            finalTranscript += transcript + " ";
-          } else {
-            interimTranscript += transcript;
+            finalTranscript += transcript;
           }
         }
 
-        transcriptArea.value = finalTranscript + interimTranscript;
+        // Append final transcript as a new line if not empty
+        if (finalTranscript) {
+          if (transcriptArea.value) {
+            transcriptArea.value += " " + finalTranscript;
+          } else {
+            transcriptArea.value = finalTranscript;
+          }
+          // Auto-resize textarea
+          transcriptArea.style.height = "auto";
+          transcriptArea.style.height = transcriptArea.scrollHeight + "px";
+        }
       };
 
       recognition.onend = () => {
-        if (isRecording) {
-          recognition.start();
-        } else {
-          statusLabel.textContent = "🛑 रिकॉर्डिंग रुकी";
-          startButton.disabled = false;
-          stopButton.disabled = true;
-        }
+        isRecording = false;
+        statusLabel.textContent = "🛑 Recording Stopped";
+        startButton.disabled = false;
+        stopButton.disabled = true;
       };
 
       recognition.onerror = (event) => {
@@ -210,8 +217,8 @@
       });
 
       saveButton.addEventListener("click", async () => {
-        const heading = headingInput.value;
-        const transcript = transcriptArea.value;
+        const heading = headingInput.value.trim();
+        const transcript = transcriptArea.value.trim();
         const assignToAll = assignAllCheckbox.checked;
         const officers = assignToAll
           ? []
@@ -219,6 +226,12 @@
               (option) => option.value
             );
         const deadline = deadlineInput.value;
+
+        if (!heading || !transcript || (!officers.length && !assignToAll)) {
+          statusLabel.textContent =
+            "❌ शीर्षक, प्रतिलेख, और अधिकारी अनिवार्य हैं";
+          return;
+        }
 
         try {
           const response = await fetch("/save_transcript", {
@@ -237,6 +250,17 @@
           statusLabel.textContent = response.ok
             ? "✅ " + result.message
             : "❌ " + result.error;
+          if (response.ok) {
+            headingInput.value = "";
+            transcriptArea.value = "";
+            transcriptArea.style.height = "auto";
+            assignAllCheckbox.checked = false;
+            officersDropdown.disabled = false;
+            Array.from(officersDropdown.options).forEach(
+              (option) => (option.selected = false)
+            );
+            deadlineInput.value = "";
+          }
         } catch (error) {
           statusLabel.textContent = `❌ टास्क सहेजने में त्रुटि: ${error.message}`;
         }

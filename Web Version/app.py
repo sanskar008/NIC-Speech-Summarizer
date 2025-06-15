@@ -29,7 +29,6 @@ def load_offices():
                 str(o).replace('"', '\\"').replace("\n", "")
                 for o in data.get("offices", [])
             ]
-            print("Loaded offices:", officers)
             return officers
     except Exception as e:
         print(f"Error loading officers: {e}")
