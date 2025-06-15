@@ -14,6 +14,25 @@
         font-family: "Noto Sans Devanagari", sans-serif;
       }
     </style>
+    <script>
+      function toggleMasterPin() {
+        const role = document.querySelector('select[name="role"]').value;
+        const masterPinDiv = document.getElementById("master-pin-div");
+        if (role === "admin") {
+          masterPinDiv.style.display = "block";
+          document.getElementById("master-pin-input").required = true;
+        } else {
+          masterPinDiv.style.display = "none";
+          document.getElementById("master-pin-input").required = false;
+        }
+      }
+      window.addEventListener("DOMContentLoaded", function () {
+        document
+          .querySelector('select[name="role"]')
+          .addEventListener("change", toggleMasterPin);
+        toggleMasterPin();
+      });
+    </script>
   </head>
   <body class="bg-gray-100 min-h-screen flex items-center justify-center">
     <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
@@ -52,6 +71,19 @@
           <option value="officer">अधिकारी</option>
           <option value="admin">व्यवस्थापक</option>
         </select>
+        <div id="master-pin-div" style="display: none">
+          <label class="block text-sm font-medium text-gray-700 mb-2"
+            >🔒 मास्टर पिन:</label
+          >
+          <input
+            type="admin@nic"
+            name="master_pin"
+            id="master-pin-input"
+            class="w-full p-3 border border-gray-300 rounded-lg mb-2"
+            autocomplete="off"
+            placeholder="To signup as admin, please enter master pin"
+          />
+        </div>
         <label class="block text-sm font-medium text-gray-700 mb-2"
           >🏢 पदनाम:</label
         >
