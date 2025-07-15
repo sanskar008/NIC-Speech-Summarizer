@@ -121,6 +121,19 @@ def signup():
         password = request.form.get("password")
         role = request.form.get("role", "officer")
         designation = request.form.get("designation", "")
+        user_pin = request.form.get("user_pin", "")
+        master_pin = request.form.get("master_pin", "")
+        # Pin validation
+        if role == "admin":
+            if not master_pin or master_pin != "admin@nic":
+                return render_template(
+                    "signup.html", error="अमान्य पिन", officers=load_offices()
+                )
+        else:
+            if not user_pin or user_pin != "user@nic":
+                return render_template(
+                    "signup.html", error="अमान्य पिन", officers=load_offices()
+                )
         try:
             response = supabase.auth.sign_up({"email": email, "password": password})
             user_id = response.user.id
@@ -131,6 +144,11 @@ def signup():
                 supabase.table("user_designations").insert(
                     {"user_id": user_id, "designation": designation}
                 ).execute()
+            # Save user_pin or master_pin as needed
+            if role == "admin":
+                print(f"Admin signup with master pin: {master_pin}")
+            else:
+                print(f"User PIN for {email}: {user_pin}")
             login_response = supabase.auth.sign_in_with_password(
                 {"email": email, "password": password}
             )

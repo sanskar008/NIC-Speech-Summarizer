@@ -235,14 +235,26 @@
         const heading = headingInput.value.trim();
         const transcript = transcriptArea.value.trim();
         const assignToAll = assignAllCheckbox.checked;
-        const officers = assignToAll
+        let selectedOfficers = assignToAll
           ? []
           : Array.from(officersDropdown.selectedOptions).map(
               (option) => option.value
             );
+
+        // If no officer selected, select 'admin' by default if present
+        if (selectedOfficers.length === 0) {
+          for (let i = 0; i < officersDropdown.options.length; i++) {
+            if (officersDropdown.options[i].value.toLowerCase() === 'admin') {
+              officersDropdown.options[i].selected = true;
+              selectedOfficers = ['admin'];
+              break;
+            }
+          }
+        }
+
         const deadline = deadlineInput.value;
 
-        if (!heading || !transcript || (!officers.length && !assignToAll)) {
+        if (!heading || !transcript || (!selectedOfficers.length && !assignToAll)) {
           statusLabel.textContent =
             "❌ बैठक शीर्षक, प्रतिलेख, और अधिकारी अनिवार्य हैं";
           return;
@@ -255,7 +267,7 @@
             body: JSON.stringify({
               heading,
               transcript,
-              officers,
+              officers: selectedOfficers,
               assign_to_all: assignToAll,
               deadline,
             }),
@@ -266,7 +278,7 @@
             ? "✅ " + result.message
             : "❌ " + result.error;
           if (response.ok) {
-            headingInput.value = "";
+            // headingInput.value = ""; // <-- Do NOT clear this
             transcriptArea.value = "";
             transcriptArea.style.height = "auto";
             assignAllCheckbox.checked = false;
