@@ -33,12 +33,12 @@
       </div>
       {% if role == 'admin' %}
       <label class="block text-m font-medium text-gray-700 mb-2"
-        >📌 शीर्षक:</label
+        >📌 बैठक शीर्षक:</label
       >
       <input
         id="heading-input"
         type="text"
-        placeholder="शीर्षक दर्ज करें..."
+        placeholder="बैठक शीर्षक दर्ज करें..."
         class="w-full p-3 border border-gray-300 rounded-lg mb-4"
       />
 
@@ -72,15 +72,30 @@
       <label class="block text-m font-medium text-gray-700 mb-2"
         >🏢 अधिकारियों को असाइन करें:</label
       >
-      <select
-        id="officers-dropdown"
-        multiple
-        class="w-full p-3 border border-gray-300 rounded-lg mb-4"
-      >
-        {% for officer in officers %}
-        <option value="{{ officer }}">{{ officer }}</option>
-        {% endfor %}
-      </select>
+      <div>
+        <label for="officerSearch">Search Officer:</label>
+        <input type="text" id="officerSearch" placeholder="Type officer name..." oninput="filterOfficerDropdown()" class="w-full p-2 border border-gray-300 rounded mb-2" />
+        <select
+          id="officers-dropdown"
+          multiple
+          class="w-full p-3 border border-gray-300 rounded-lg mb-4"
+        >
+          {% for officer in officers %}
+          <option value="{{ officer }}">{{ officer }}</option>
+          {% endfor %}
+        </select>
+        <script>
+        function filterOfficerDropdown() {
+          const input = document.getElementById('officerSearch').value.toLowerCase();
+          const dropdown = document.getElementById('officers-dropdown');
+          for (let i = 0; i < dropdown.options.length; i++) {
+            const txt = dropdown.options[i].text.toLowerCase();
+            dropdown.options[i].style.display = txt.includes(input) ? '' : 'none';
+          }
+        }
+        </script>
+
+      </div>
       <label class="flex items-center mb-4">
         <input type="checkbox" id="assign-all" class="mr-2" />
         <span>सभी अधिकारियों को असाइन करें</span>
@@ -229,7 +244,7 @@
 
         if (!heading || !transcript || (!officers.length && !assignToAll)) {
           statusLabel.textContent =
-            "❌ शीर्षक, प्रतिलेख, और अधिकारी अनिवार्य हैं";
+            "❌ बैठक शीर्षक, प्रतिलेख, और अधिकारी अनिवार्य हैं";
           return;
         }
 

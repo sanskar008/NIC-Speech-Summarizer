@@ -6,6 +6,7 @@
     <title>All Tasks</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&display=swap"
@@ -66,7 +67,7 @@
             <tr class="bg-gray-200 filter-row">
               <th class="border p-2">
                 <select data-filter="heading">
-                  <option value="">सभी शीर्षक</option>
+                  <option value="">सभी बैठक शीर्षक</option>
                 </select>
               </th>
               <th class="border p-2">
@@ -107,7 +108,7 @@
             </tr>
             <tr class="bg-gray-200">
               <th class="border p-2 text-left sortable" data-sort="heading">
-                शीर्षक <span class="sort-arrow"></span>
+                बैठक शीर्षक <span class="sort-arrow"></span>
               </th>
               <th class="border p-2 text-left sortable" data-sort="transcript">
                 विवरण <span class="sort-arrow"></span>
@@ -140,6 +141,9 @@
           <tbody id="transcripts-table-body"></tbody>
         </table>
       </div>
+      <button id="startBtn">Start Recording</button>
+      <button id="stopBtn" disabled>Stop Recording</button>
+      <textarea id="transcriptBox" rows="10" cols="60"></textarea>
     </div>
 
     <script id="officers-data" type="application/json">
@@ -326,7 +330,7 @@
           return;
         }
 
-        filteredTasks.forEach((task) => {
+        filteredTasks.forEach((task, taskIdx) => {
           const officerOptions = availableOfficers
             .map(
               (officer) =>
@@ -362,7 +366,8 @@
           )}</textarea>
             </td>
             <td class="border p-2">
-              <select multiple class="w-full p-1 border rounded" data-id="${
+              <input type="text" placeholder="Search officer..." class="officer-search w-full p-1 border rounded mb-1" data-task-idx="${taskIdx}" aria-label="Search officer">
+              <select multiple class="w-full p-1 border rounded officer-dropdown" data-id="${
                 task.id
               }" data-field="officers" title="Ctrl+क्लिक से एकाधिक अधिकारी चुनें">
                 ${officerOptions}
@@ -371,9 +376,7 @@
                 <input type="checkbox" class="assign-all-checkbox mr-2" data-id="${
                   task.id
                 }" ${
-            task.assignments.length === availableOfficers.length
-              ? "checked"
-              : ""
+            task.assignments.length === availableOfficers.length ? "checked" : ""
           }>
                 <span>सभी अधिकारियों को असाइन करें</span>
               </label>
@@ -554,7 +557,7 @@
           ).value;
 
           if (!heading || !transcript || (!officers.length && !assignAll)) {
-            alert("शीर्षक, प्रतिलेख, और कम से कम एक अधिकारी अनिवार्य हैं");
+            alert("बैठक शीर्षक, प्रतिलेख, और कम से कम एक अधिकारी अनिवार्य हैं");
             return;
           }
 
@@ -614,7 +617,73 @@
         }
       });
 
+      let socket;
+      let mediaRecorder;
+
+      function convertToPCM(blob, callback) {
+          // This is a placeholder. For production, use a library to convert to 16-bit PCM (LINEAR16, 16kHz)
+          // For demo, we send raw audio (may work with Chrome/Firefox, but not guaranteed accurate)
+          blob.arrayBuffer().then(buffer => {
+              callback(buffer);
+          });
+      }
+
+      document.getElementById('startBtn').onclick = async function() {
+          socket = io();
+          socket.emit('start_stream');
+          document.getElementById('startBtn').disabled = true;
+          document.getElementById('stopBtn').disabled = false;
+
+          socket.on('stream_started', () => {
+              navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                  mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                  mediaRecorder.start(250); // send every 250ms
+
+                  mediaRecorder.ondataavailable = function(e) {
+                      if (e.data.size > 0) {
+                          convertToPCM(e.data, (buffer) => {
+                              socket.emit('audio_chunk', buffer);
+                          });
+                      }
+                  };
+
+                  mediaRecorder.onstop = function() {
+                      socket.emit('stop_stream');
+                      stream.getTracks().forEach(track => track.stop());
+                  };
+              });
+          });
+
+          socket.on('transcript', function(data) {
+              document.getElementById('transcriptBox').value = data.text;
+          });
+      };
+
+      document.getElementById('stopBtn').onclick = function() {
+          if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+              mediaRecorder.stop();
+          }
+          document.getElementById('startBtn').disabled = false;
+          document.getElementById('stopBtn').disabled = true;
+      };
+
       window.onload = loadTranscripts;
+    </script>
+    <script>
+      document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('officer-search')) {
+          const taskIdx = e.target.getAttribute('data-task-idx');
+          const searchValue = e.target.value.toLowerCase();
+          const dropdowns = document.querySelectorAll('.officer-dropdown');
+          if (dropdowns[taskIdx]) {
+            const dropdown = dropdowns[taskIdx];
+            for (let i = 0; i < dropdown.options.length; i++) {
+              const txt = dropdown.options[i].text.toLowerCase();
+              dropdown.options[i].style.display = txt.includes(searchValue) ? '' : 'none';
+            }
+          }
+        }
+      });
     </script>
   </body>
 </html>

@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "nic-rajgarh",
+  "private_key_id": "025d599c7ab35594431732d574980d861707c250",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC/qFi2H02rU+OQ\nQSoMF3BPLWcI9IKlV8UBbp+NrCvjACwDfD5d1AK3nJF9yxjHNkFK9vMF0gF+hRcN\n3TQ0e8ZW68eNmccq+LqcSdftFjisW18ToN/m7wZ56XHPSFz+HvnXVPB6FeWAnSwS\nOZi4cMW/rLsDMwlBCBl+MJMcf9+UfvdVGSw4HrdPsYgfct3QKmzPrECMk4OW2B3t\ngR+5BTDNZkMbMCpSvjR5bQ+aUBZm1ekVTD3aYocF2vWbiSmW3asVeeXWpOdYee6D\nwAaAa/8O1iJpc46rxL/6tMdqWypgIqgw/kkhAowzbGP2rwcDkgDs3J0knDlUzQ+n\n2ytPhHbTAgMBAAECggEAC7MNtauT6y+tkyKKaL7zI4vK+V7FRuCXukgNd1fmPSIt\nwNZQKRwf2la1aIkB7ZwGc+2lO8EfeqCw0PwK2GIh4zAOnqDStqQ37mhxK09EjS9U\nTqqh+fZNxLPKao12F8RX55woxEGBhzT3YFluiC77wBqd0LEuqtVnipURtePcbk0P\ngDFa4r4JlYPMPu5z5aqJb1nxAnuusEG1VrYotS2J6jGkK7XoJxmBCtgjJLMa2a15\ntE0bi56HOwZnEdGxUfyeg3x8aVVIduXFettuNmwq0wwqolS/zPxJvTXkCwz2d+Cp\nmw9R/dHkQvPQA3Ilen70L+v3Tg1KBY24mOeVe8LECQKBgQDxPdgHHvBK++xbrlyu\n5uLtuEyqWNfkjVUnoYZIddNi9oDMY1YGyETHGyQB0YFaRkQ0Juen36TRj5VRUqd7\nf1HgFKigz2lOiZnzSqopSnf0aEPd+vHycVrt7nPOez1km93N1E9fF7R+x/iYvxGL\n6uOrmZk7k+0r/3eC7jLu53pDZwKBgQDLYfQLVGCb8Gt8t0CRk6u2NP1Z5V1GjhzY\ntNQJLdTiUhftyCObypA/+hCdd1GwIvRRLzorh5rUtIHJYotMAJ2jzwhvl+v+NWKg\nJmfrwj9EBgUf9rRb6MGEjJdOCEBYZ40hlpyzAiiCrEUVQBpUuZ1iIZwR8nlsZQ3L\nRI5SE7xZtQKBgQC7hWYqSttgfilBLu0uq5zUSoGVnM/dAhuiXcVjB+vULmb5+XGC\nfiQwXSGFJFSXVq1nmKJT9N1KZIEeINC9h7+eHpDhx7hE62M3Id/ZjuBlpLK0l3+B\nBKo47zUn2NZlIV+two4cDfIo5sqP+V3rVB+7YP8it58Rp1g/92ayHE8GmwKBgEaM\nQsgPS7erzM0lD8uvipeYh+0/53wK3ay6BPbuI/MhgNVlYByxRho7FrpYYkiTx2XF\n2Qqybh2sQ3zkpucFK6lfrlBvRVgXko904wVfiuyAnhR5UhSzhzUAQ5e4uwEvYkAt\na0uYyw6QzSHS649KF3Krr+R11HKqFv/UVv3XhLUlAoGBAKdHQ+mCjRGDh5kN1fir\n8aItQuoqsaLxNimUCoy6zpyRB/Znl0SjW6dYDT5FNFqUsyJQ490sue/T1ew4O9qH\nMayRP/iQ9RVvYweacAQ2QPLPIXEEmrXyg8CfSAMd8h62J2JwZL5oh/S9QU6Gg2y2\nSfA+ysrRTrCd67mqsf0JnZC9\n-----END PRIVATE KEY-----\n",
+  "client_email": "nic-919@nic-rajgarh.iam.gserviceaccount.com",
+  "client_id": "112597818251431750615",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/nic-919%40nic-rajgarh.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

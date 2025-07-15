@@ -4,8 +4,14 @@ import os
 import logging
 from supabase import create_client, Client
 from datetime import datetime
+from flask_socketio import SocketIO, emit
+import eventlet
+import queue
+import threading
+from google.cloud import speech
 
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "your-secret-key")
 
 from dotenv import load_dotenv
@@ -17,6 +23,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.join(os.path.dirname(__file__), "nic-rajgarh-025d599c7ab3.json")
 
 # Load officers from JSON
 def load_offices():
@@ -70,7 +77,7 @@ def get_user_designations(user_id):
             if designations_response.data
             else []
         )
-        print(f"Designations for user {user_id}:", designations)
+        #print(f"Designations for user {user_id}:", designations)
         return designations
     except Exception as e:
         print(f"Error fetching designations: {e}")
@@ -99,7 +106,7 @@ def login():
                 "email": response.user.email,
                 "created_at": response.user.created_at,
             }
-            print("Session user:", user_data)
+            #print("Session user:", user_data)
             session["user"] = user_data
             return redirect(url_for("index"))
         except Exception as e:
@@ -183,7 +190,7 @@ def save_transcript():
         deadline = data.get("deadline", "").strip()
 
         if not heading or not transcript or not (officers or assign_to_all):
-            return jsonify({"error": "शीर्षक, प्रतिलेख, और अधिकारी अनिवार्य हैं"}), 400
+            return jsonify({"error": "बैठक शीर्षक, प्रतिलेख, और अधिकारी अनिवार्य हैं"}), 400
 
         deadline_dt = (
             datetime.fromisoformat(deadline.replace("T", " ")) if deadline else None
@@ -249,7 +256,7 @@ def get_transcripts():
                 .eq("task_id", task["id"])
                 .execute()
             )
-            print(f"Assignments for task {task['id']}:", assignments_response.data)
+            #print(f"Assignments for task {task['id']}:", assignments_response.data)
             task["assignments"] = (
                 assignments_response.data if assignments_response.data else []
             )
@@ -288,7 +295,7 @@ def get_my_tasks():
             if assignments_response.data:
                 task["assignments"] = assignments_response.data
                 filtered_tasks.append(task)
-        print("Filtered tasks:", filtered_tasks)
+        #print("Filtered tasks:", filtered_tasks)
         return jsonify(filtered_tasks), 200
     except Exception as e:
         print(f"Error fetching my tasks: {str(e)}")
@@ -329,16 +336,16 @@ def update_task(task_id):
             supabase.table("tasks").update({"status": status}).eq(
                 "id", task_id
             ).execute()
-            print(f"Updated status for task {task_id} to {status}")
+            #print(f"Updated status for task {task_id} to {status}")
 
         # Update comment
         if update_comment:
             supabase.table("task_assignments").update(
                 {"update_comment": update_comment}
             ).eq("task_id", task_id).eq("officer", officer).execute()
-            print(
-                f"Updated comment for task {task_id}, officer {officer}: {update_comment}"
-            )
+            #print(
+            #    f"Updated comment for task {task_id}, officer {officer}: {update_comment}"
+            #)
 
         return jsonify({"message": "टास्क सफलतापूर्वक अपडेट किया गया"}), 200
     except Exception as e:
@@ -359,7 +366,7 @@ def update_transcript(id):
         deadline = data.get("deadline", "").strip()
 
         if not heading or not transcript:
-            return jsonify({"error": "शीर्षक और प्रतिलेख अनिवार्य हैं"}), 400
+            return jsonify({"error": "बैठक शीर्षक और प्रतिलेख अनिवार्य हैं"}), 400
 
         deadline_dt = (
             datetime.fromisoformat(deadline.replace("T", " ")) if deadline else None
@@ -429,5 +436,51 @@ def debug_officers():
     return jsonify({"officers": officers})
 
 
+# === Live Speech-to-Text Streaming Handlers ===
+
+@socketio.on('start_stream')
+def start_stream():
+    if not hasattr(threading.current_thread(), "audio_queue"):
+        threading.current_thread().audio_queue = queue.Queue()
+    emit('stream_started')
+
+@socketio.on('audio_chunk')
+def receive_audio_chunk(data):
+    if hasattr(threading.current_thread(), "audio_queue"):
+        threading.current_thread().audio_queue.put(data)
+
+@socketio.on('stop_stream')
+def stop_stream():
+    if hasattr(threading.current_thread(), "audio_queue"):
+        threading.current_thread().audio_queue.put(None)
+
+@socketio.on('stream_audio')
+def stream_audio():
+    audio_queue = queue.Queue()
+    client = speech.SpeechClient()
+    config = speech.RecognitionConfig(
+        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+        sample_rate_hertz=16000,
+        language_code="hi-IN",
+    )
+    streaming_config = speech.StreamingRecognitionConfig(
+        config=config,
+        interim_results=True,
+        single_utterance=False,
+    )
+    def audio_generator():
+        while True:
+            chunk = audio_queue.get()
+            if chunk is None:
+                break
+            yield speech.StreamingRecognizeRequest(audio_content=chunk)
+    requests = audio_generator()
+    responses = client.streaming_recognize(streaming_config, requests)
+    for response in responses:
+        for result in response.results:
+            transcript = result.alternatives[0].transcript
+            emit('transcript', {'text': transcript})
+
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    socketio.run(app, debug=True)
